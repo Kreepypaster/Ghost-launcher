@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Призрачный Лаунчер — Mimilow Island</title>
-    <!-- Новое супер-надёжное подключение Supabase без блокировок -->
+    <!-- Супер-надёжное подключение Supabase без блокировок -->
     <script src="https://unpkg.com"></script>
     <style>
         body { font-family: sans-serif; background: #243328; color: #E0FFE6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
@@ -40,7 +40,7 @@
 </div>
 
 <script>
-    // Настройки твоей базы данных
+    // Твои проверенные ключи Supabase
     const SUPABASE_URL = "https://supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TdTkz8-C0uMkfQeAsGOF1Q_zIQlIulo";
     
@@ -50,24 +50,29 @@
     let isLoginMode = false;
     let supabase = null;
 
-    // Инициализация базы данных
+    // 1. Инициализация базы данных
     try {
         if (window.supabase) {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("База данных успешно подключена!");
         }
     } catch (e) {
-        console.error("Ошибка инициализации базы:", e);
+        console.error("Ошибка подключения к Supabase:", e);
     }
 
-    // ФУНКЦИЯ: Автоматически восстанавливает текст в полях при перезагрузке сайта
-    window.onload = function() {
+    // 2. Восстановление данных при загрузке страницы (сразу после отрисовки полей)
+    function loadSavedFields() {
         if (localStorage.getItem('mimi_username')) document.getElementById('username').value = localStorage.getItem('mimi_username');
         if (localStorage.getItem('mimi_password')) document.getElementById('password').value = localStorage.getItem('mimi_password');
         if (localStorage.getItem('mimi_email')) document.getElementById('email').value = localStorage.getItem('mimi_email');
         if (localStorage.getItem('mimi_invite')) document.getElementById('invite').value = localStorage.getItem('mimi_invite');
-    };
+    }
+    
+    // Запускаем восстановление моментально
+    window.addEventListener('DOMContentLoaded', loadSavedFields);
+    setTimeout(loadSavedFields, 100); // Дублируем запуск для медленных браузеров
 
-    // ФУНКЦИЯ: Запоминает всё, что ты вводишь в 4 полосы
+    // 3. Сохранение данных в память при абсолютно любом изменении текста
     function saveFields() {
         localStorage.setItem('mimi_username', document.getElementById('username').value);
         localStorage.setItem('mimi_password', document.getElementById('password').value);
@@ -75,7 +80,7 @@
         localStorage.setItem('mimi_invite', document.getElementById('invite').value);
     }
 
-    // Переключение режимов Вход / Регистрация
+    // Переключение вкладок
     function toggleMode() {
         const emailField = document.getElementById('email');
         const inviteField = document.getElementById('invite');
@@ -111,7 +116,7 @@
             const msgDiv = document.getElementById('msg');
             msgDiv.style.display = "block";
             msgDiv.style.color = "#ff6666";
-            msgDiv.innerText = "❌ Ошибка подключения: Сервер Supabase не ответил. Пожалуйста, обновите страницу.";
+            msgDiv.innerText = "❌ Ошибка подключения: Сервер Supabase не ответил. Пожалуйста, обновите страницу через Ctrl+F5.";
             return;
         }
 
@@ -221,9 +226,3 @@
     }
 
     function showSuccessScreen() {
-        const msgDiv = document.getElementById('msg');
-        msgDiv.style.color = "#52DD6A";
-        msgDiv.style.background = "rgba(82, 221, 106, 0.1)";
-        msgDiv.style.border = "1px solid #52DD6A";
-        msgDiv.innerText = `🎉 Успех! Действие выполнено успешно!`;
-        
