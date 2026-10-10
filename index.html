@@ -4,22 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Призрачный Лаунчер — Mimilow Island</title>
-    <!-- Официальное подключение Supabase -->
+    <!-- Подключение Supabase -->
     <script src="https://jsdelivr.net"></script>
     <style>
         body { font-family: sans-serif; background: #243328; color: #E0FFE6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .form-container { background: #32824D; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 320px; border: 2px solid #52DD6A; }
         h2 { text-align: center; margin-top: 0; color: #E0FFE6; text-shadow: 0 0 10px rgba(82, 221, 106, 0.6); margin-bottom: 5px; }
-        
         input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #243328; background: #1c2620; color: #52DD6A; border-radius: 5px; box-sizing: border-box; font-weight: bold; }
         input::placeholder { color: #4a6352; }
-        
         button { width: 100%; padding: 12px; background: #52DD6A; border: none; color: #243328; font-weight: bold; font-size: 16px; border-radius: 5px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
         button:hover { background: #E0FFE6; box-shadow: 0 0 15px #52DD6A; }
-        
-        .sub-btn { background: #1c2620; color: #52DD6A; border: 1px solid #243328; font-size: 13px; }
-        .sub-btn:hover { background: #243328; box-shadow: none; color: #E0FFE6; }
-
+        .sub-btn { width: 100%; padding: 12px; background: #1c2620; color: #52DD6A; border: 1px solid #243328; font-size: 13px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .sub-btn:hover { background: #243328; color: #E0FFE6; }
         .message { margin-top: 15px; text-align: center; font-size: 14px; font-weight: bold; padding: 10px; border-radius: 5px; line-height: 1.4; display: none; }
         .hint { font-size: 11px; color: #b3ffd1; text-align: center; margin-bottom: 15px; line-height: 1.3; }
     </style>
@@ -27,20 +23,16 @@
 <body>
 
 <div class="form-container">
-    <!-- Заголовок точно как на скриншоте -->
     <h2 id="formTitle">Призрачный Лаунчер</h2>
     <div id="formHint" class="hint">Пароль от 4 знаков! Для создания аккаунта заполни инвайт. Для входа — только Ник и Пароль. 🎁</div>
     
     <div id="inputsBlock">
         <input type="text" id="username" placeholder="Игровой Никнейм" required>
         <input type="password" id="password" placeholder="Пароль для входа" required>
-        
-        <!-- Дополнительные поля для регистрации -->
         <input type="email" id="email" placeholder="Твоя Почта (Необязательно)">
         <input type="text" id="invite" placeholder="Уникальный инвайт-код (Для создания акка)">
     </div>
 
-    <!-- Кнопки управления -->
     <button id="mainBtn" onclick="handleAuth()">Зарегистрироваться</button>
     <button id="toggleBtn" class="sub-btn" onclick="toggleMode()">Я уже мышка, войти!</button>
 
@@ -48,17 +40,26 @@
 </div>
 
 <script>
-    // Твои проверенные ключи базы данных
+    // 1. ПЕРЕМЕННЫЕ НАСТРОЕК — СТРОГО В САМОМ ВЕРХУ СКРИПТА
     const SUPABASE_URL = "https://supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TdTkz8-C0uMkfQeAsGOF1Q_zIQlIulo";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+    
     const BAD_WORDS = ["хуй", "пизд", "ебл", "еба", "сук", "бля", "говн", "трах", "член", "гандон", "залуп", "sex", "fuck", "письк"];
     const ALLOWED_INVITES = ["SPOOKY2026", "MIMILOW1", "GHOST77", "4ef386ef", "HALLOWEEN"];
     
     let isLoginMode = false;
+    let supabase = null;
 
-    // Переключение режимов Вход / Регистрация БЕЗ багов со скрытием
+    // Безопасная инициализация базы
+    try {
+        if (window.supabase) {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+    } catch (e) {
+        console.error("Ошибка инициализации базы:", e);
+    }
+
+    // Переключение режимов
     function toggleMode() {
         const emailField = document.getElementById('email');
         const inviteField = document.getElementById('invite');
@@ -84,6 +85,21 @@
     }
 
     async function handleAuth() {
+        // Проверка подключения библиотеки
+        if (!supabase && window.supabase) {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } catch(e) {}
+        }
+
+        if (!supabase) {
+            const msgDiv = document.getElementById('msg');
+            msgDiv.style.display = "block";
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка подключения: Сервер Supabase не ответил. Пожалуйста, обновите страницу.";
+            return;
+        }
+
         if (isLoginMode) {
             await loginUser();
         } else {
@@ -149,10 +165,11 @@
         }
 
         // Выдача монет
-        supabase.from('profiles')
-            .insert([{ id: data.user.id, coins: 100, candies: 0, weapons: 5 }])
-            .then(() => console.log("Стартовые ресурсы выданы."))
-            .catch((e) => console.log("Пропуск таблицы монет:", e));
+        try {
+            await supabase.from('profiles').insert([{ id: data.user.id, coins: 100, candies: 0, weapons: 5 }]);
+        } catch(e) {
+            console.log("Пропуск таблицы монет");
+        }
 
         showSuccessScreen();
     }
@@ -170,7 +187,7 @@
 
         if (!username || !password) {
             msgDiv.style.color = "#ff6666";
-            msgDiv.innerText = "❌ Ошибка: Введи Ник и Пароль для входа!";
+            msgDiv.innerText = "❌ Ошибка: Введи Ник и Пароль!";
             return;
         }
 
@@ -204,3 +221,5 @@
         document.getElementById('invite').value = "";
     }
 </script>
+</body>
+</html>
