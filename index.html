@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Призрачный Лаунчер — Mimilow Island</title>
+    <!-- Официальное подключение Supabase -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body { font-family: sans-serif; background: #243328; color: #E0FFE6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .form-container { background: #32824D; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 320px; border: 2px solid #52DD6A; }
+        h2 { text-align: center; margin-top: 0; color: #E0FFE6; text-shadow: 0 0 10px rgba(82, 221, 106, 0.6); margin-bottom: 5px; }
+        
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #243328; background: #1c2620; color: #52DD6A; border-radius: 5px; box-sizing: border-box; font-weight: bold; }
+        input::placeholder { color: #4a6352; }
+        
+        button { width: 100%; padding: 12px; background: #52DD6A; border: none; color: #243328; font-weight: bold; font-size: 16px; border-radius: 5px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        button:hover { background: #E0FFE6; box-shadow: 0 0 15px #52DD6A; }
+        
+        .sub-btn { background: #1c2620; color: #52DD6A; border: 1px solid #243328; font-size: 13px; }
+        .sub-btn:hover { background: #243328; box-shadow: none; color: #E0FFE6; }
+
+        .message { margin-top: 15px; text-align: center; font-size: 14px; font-weight: bold; padding: 10px; border-radius: 5px; line-height: 1.4; display: none; }
+        .hint { font-size: 11px; color: #b3ffd1; text-align: center; margin-bottom: 15px; line-height: 1.3; }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <!-- Заголовок точно как на скриншоте -->
+    <h2 id="formTitle">Призрачный Лаунчер</h2>
+    <div id="formHint" class="hint">Пароль от 4 знаков! Для создания аккаунта заполни инвайт. Для входа — только Ник и Пароль. 🎁</div>
+    
+    <div id="inputsBlock">
+        <input type="text" id="username" placeholder="Игровой Никнейм" required>
+        <input type="password" id="password" placeholder="Пароль для входа" required>
+        
+        <!-- Дополнительные поля для регистрации -->
+        <input type="email" id="email" placeholder="Твоя Почта (Необязательно)">
+        <input type="text" id="invite" placeholder="Уникальный инвайт-код (Для создания акка)">
+    </div>
+
+    <!-- Кнопки управления -->
+    <button id="mainBtn" onclick="handleAuth()">Зарегистрироваться</button>
+    <button id="toggleBtn" class="sub-btn" onclick="toggleMode()">Я уже мышка, войти!</button>
+
+    <div class="message" id="msg"></div>
+</div>
+
+<script>
+    // Твои проверенные ключи базы данных
+    const SUPABASE_URL = "https://supabase.co"; 
+    const SUPABASE_KEY = "sb_publishable_TdTkz8-C0uMkfQeAsGOF1Q_zIQlIulo";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const BAD_WORDS = ["хуй", "пизд", "ебл", "еба", "сук", "бля", "говн", "трах", "член", "гандон", "залуп", "sex", "fuck", "письк"];
+    const ALLOWED_INVITES = ["SPOOKY2026", "MIMILOW1", "GHOST77", "4ef386ef", "HALLOWEEN"];
+    
+    let isLoginMode = false;
+
+    // Переключение режимов Вход / Регистрация БЕЗ багов со скрытием
+    function toggleMode() {
+        const emailField = document.getElementById('email');
+        const inviteField = document.getElementById('invite');
+        const mainBtn = document.getElementById('mainBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const msgDiv = document.getElementById('msg');
+        
+        if (msgDiv) msgDiv.style.display = "none";
+
+        if (!isLoginMode) {
+            isLoginMode = true;
+            emailField.style.display = "none";
+            inviteField.style.display = "none";
+            mainBtn.innerText = "Войти в игру!";
+            toggleBtn.innerText = "Хочу создать аккаунт";
+        } else {
+            isLoginMode = false;
+            emailField.style.display = "block";
+            inviteField.style.display = "block";
+            mainBtn.innerText = "Зарегистрироваться";
+            toggleBtn.innerText = "Я уже мышка, войти!";
+        }
+    }
+
+    async function handleAuth() {
+        if (isLoginMode) {
+            await loginUser();
+        } else {
+            await registerUser();
+        }
+    }
+
+    async function registerUser() {
+        const username = document.getElementById('username').value.trim();
+        let email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const invite = document.getElementById('invite').value.trim();
+        const msgDiv = document.getElementById('msg');
+
+        msgDiv.style.display = "block";
+        msgDiv.style.background = "rgba(0,0,0,0.2)";
+        msgDiv.style.color = "#E0FFE6";
+        msgDiv.style.border = "none";
+        msgDiv.innerText = "⚡ Отправка данных на сервер...";
+
+        if (!username || !password || !invite) {
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка: Заполни все поля!";
+            return;
+        }
+        if (password.length < 4) {
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка: Пароль должен быть от 4 знаков!";
+            return;
+        }
+
+        const lowerUsername = username.toLowerCase();
+        for (let word of BAD_WORDS) {
+            if (lowerUsername.includes(word)) {
+                msgDiv.style.color = "#ff6666";
+                msgDiv.innerText = "🛑 Ошибка: Ник содержит запрещенные слова!";
+                return;
+            }
+        }
+
+        if (!ALLOWED_INVITES.includes(invite)) {
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка: Неверный инвайт-код!";
+            return;
+        }
+
+        if (!email) {
+            email = `${username.toLowerCase()}@mimilow.fake`;
+        }
+
+        let finalPassword = password.length < 6 ? password + "_mimilow_child_secure" : password;
+
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: finalPassword,
+            options: { data: { display_name: username } }
+        });
+
+        if (error) {
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка: " + error.message;
+            return;
+        }
+
+        // Выдача монет
+        supabase.from('profiles')
+            .insert([{ id: data.user.id, coins: 100, candies: 0, weapons: 5 }])
+            .then(() => console.log("Стартовые ресурсы выданы."))
+            .catch((e) => console.log("Пропуск таблицы монет:", e));
+
+        showSuccessScreen();
+    }
+
+    async function loginUser() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        const msgDiv = document.getElementById('msg');
+
+        msgDiv.style.display = "block";
+        msgDiv.style.background = "rgba(0,0,0,0.2)";
+        msgDiv.style.color = "#E0FFE6";
+        msgDiv.style.border = "none";
+        msgDiv.innerText = "🔑 Проверка данных входа...";
+
+        if (!username || !password) {
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка: Введи Ник и Пароль для входа!";
+            return;
+        }
+
+        let email = `${username.toLowerCase()}@mimilow.fake`;
+        let finalPassword = password.length < 6 ? password + "_mimilow_child_secure" : password;
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: finalPassword
+        });
+
+        if (error) {
+            msgDiv.style.color = "#ff6666";
+            msgDiv.innerText = "❌ Ошибка: Неверный ник или пароль!";
+            return;
+        }
+
+        showSuccessScreen();
+    }
+
+    function showSuccessScreen() {
+        const msgDiv = document.getElementById('msg');
+        msgDiv.style.color = "#52DD6A";
+        msgDiv.style.background = "rgba(82, 221, 106, 0.1)";
+        msgDiv.style.border = "1px solid #52DD6A";
+        msgDiv.innerText = `🎉 Успех! Действие выполнено успешно!`;
+        
+        document.getElementById('username').value = "";
+        document.getElementById('password').value = "";
+        document.getElementById('email').value = "";
+        document.getElementById('invite').value = "";
+    }
+</script>
