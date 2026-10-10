@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Призрачный Лаунчер — Mimilow Island</title>
-    <!-- Подключение Supabase -->
-    <script src="https://jsdelivr.net"></script>
+    <!-- Новое супер-надёжное подключение Supabase без блокировок -->
+    <script src="https://unpkg.com"></script>
     <style>
         body { font-family: sans-serif; background: #243328; color: #E0FFE6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .form-container { background: #32824D; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); width: 320px; border: 2px solid #52DD6A; }
@@ -27,10 +27,10 @@
     <div id="formHint" class="hint">Пароль от 4 знаков! Для создания аккаунта заполни инвайт. Для входа — только Ник и Пароль. 🎁</div>
     
     <div id="inputsBlock">
-        <input type="text" id="username" placeholder="Игровой Никнейм" required>
-        <input type="password" id="password" placeholder="Пароль для входа" required>
-        <input type="email" id="email" placeholder="Твоя Почта (Необязательно)">
-        <input type="text" id="invite" placeholder="Уникальный инвайт-код (Для создания акка)">
+        <input type="text" id="username" placeholder="Игровой Никнейм" required oninput="saveFields()">
+        <input type="password" id="password" placeholder="Пароль для входа" required oninput="saveFields()">
+        <input type="email" id="email" placeholder="Твоя Почта (Необязательно)" oninput="saveFields()">
+        <input type="text" id="invite" placeholder="Уникальный инвайт-код (Для создания акка)" oninput="saveFields()">
     </div>
 
     <button id="mainBtn" onclick="handleAuth()">Зарегистрироваться</button>
@@ -40,7 +40,7 @@
 </div>
 
 <script>
-    // 1. ПЕРЕМЕННЫЕ НАСТРОЕК — СТРОГО В САМОМ ВЕРХУ СКРИПТА
+    // Настройки твоей базы данных
     const SUPABASE_URL = "https://supabase.co"; 
     const SUPABASE_KEY = "sb_publishable_TdTkz8-C0uMkfQeAsGOF1Q_zIQlIulo";
     
@@ -50,7 +50,7 @@
     let isLoginMode = false;
     let supabase = null;
 
-    // Безопасная инициализация базы
+    // Инициализация базы данных
     try {
         if (window.supabase) {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -59,7 +59,23 @@
         console.error("Ошибка инициализации базы:", e);
     }
 
-    // Переключение режимов
+    // ФУНКЦИЯ: Автоматически восстанавливает текст в полях при перезагрузке сайта
+    window.onload = function() {
+        if (localStorage.getItem('mimi_username')) document.getElementById('username').value = localStorage.getItem('mimi_username');
+        if (localStorage.getItem('mimi_password')) document.getElementById('password').value = localStorage.getItem('mimi_password');
+        if (localStorage.getItem('mimi_email')) document.getElementById('email').value = localStorage.getItem('mimi_email');
+        if (localStorage.getItem('mimi_invite')) document.getElementById('invite').value = localStorage.getItem('mimi_invite');
+    };
+
+    // ФУНКЦИЯ: Запоминает всё, что ты вводишь в 4 полосы
+    function saveFields() {
+        localStorage.setItem('mimi_username', document.getElementById('username').value);
+        localStorage.setItem('mimi_password', document.getElementById('password').value);
+        localStorage.setItem('mimi_email', document.getElementById('email').value);
+        localStorage.setItem('mimi_invite', document.getElementById('invite').value);
+    }
+
+    // Переключение режимов Вход / Регистрация
     function toggleMode() {
         const emailField = document.getElementById('email');
         const inviteField = document.getElementById('invite');
@@ -85,7 +101,6 @@
     }
 
     async function handleAuth() {
-        // Проверка подключения библиотеки
         if (!supabase && window.supabase) {
             try {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -164,12 +179,9 @@
             return;
         }
 
-        // Выдача монет
         try {
             await supabase.from('profiles').insert([{ id: data.user.id, coins: 100, candies: 0, weapons: 5 }]);
-        } catch(e) {
-            console.log("Пропуск таблицы монет");
-        }
+        } catch(e) {}
 
         showSuccessScreen();
     }
@@ -215,11 +227,3 @@
         msgDiv.style.border = "1px solid #52DD6A";
         msgDiv.innerText = `🎉 Успех! Действие выполнено успешно!`;
         
-        document.getElementById('username').value = "";
-        document.getElementById('password').value = "";
-        document.getElementById('email').value = "";
-        document.getElementById('invite').value = "";
-    }
-</script>
-</body>
-</html>
